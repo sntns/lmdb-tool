@@ -31,7 +31,7 @@ lmdb-tools --input <input_file> <command>
 
 #### Convert
 
-To use the LMDB Convert Tool, execute the following command in your terminal:
+The `convert` command is used to convert data between different architectures, either from 32bits to 64bits or vice versa.
 
 ```sh
 lmdb-tools --input <input_file> convert <output_file> --format <format>
