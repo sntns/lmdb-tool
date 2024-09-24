@@ -25,7 +25,7 @@ The command is structured with commands. Common argument is `--input` which is t
 
 ```sh
 lmdb-tools --input <input_file> <command> 
-````
+```
 
 ### Commands
 
