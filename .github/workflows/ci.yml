@@ -123,12 +123,6 @@ jobs:
           key: cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: cargo-
 
-      - name: Install cargo-deb
-        run: cargo install cargo-deb
-
-      - name: Install cross-rs
-        run: cargo install cross
-
       - name: Fetch
         run: cross fetch --locked --target ${{ matrix.target }}
 
