@@ -19,9 +19,9 @@ pub struct Cli {
     command: Commands,
 }
 
-impl Into<OsStr> for lmdb::WordSize {
-    fn into(self) -> OsStr {
-        match self {
+impl From<lmdb::WordSize> for OsStr {
+    fn from(size: lmdb::WordSize) -> Self {
+        match size {
             lmdb::WordSize::Word32 => "32".into(),
             lmdb::WordSize::Word64 => "64".into(),
         }

@@ -31,18 +31,18 @@ impl<R> DatabaseReader for Reader32<R> where R: byteorder::ReadBytesExt + std::i
     }
 
     fn read_u16(&mut self) -> Result<u16, Error> {
-        Ok(self.reader.read_u16::<LittleEndian>()
-            .change_context(Error::ReadError)?)
+        self.reader.read_u16::<LittleEndian>()
+            .change_context(Error::ReadError)
     }
 
     fn read_u32(&mut self) -> Result<u32, Error> {
-        Ok(self.reader.read_u32::<LittleEndian>()
-            .change_context(Error::ReadError)?)
+        self.reader.read_u32::<LittleEndian>()
+            .change_context(Error::ReadError)
     }
 
     fn read_exact(&mut self, buf: &mut [u8]) -> Result<(), Error> {
-        Ok(self.reader.read_exact(buf)
-            .change_context(Error::ReadError)?)
+        self.reader.read_exact(buf)
+            .change_context(Error::ReadError)
     }
 }
 
@@ -65,22 +65,22 @@ impl<R> DatabaseReader for Reader64<R> where R: byteorder::ReadBytesExt + std::i
     }
 
     fn read_word(&mut self) -> Result<u64, Error> {
-        Ok(self.reader.read_u64::<LittleEndian>()
-            .change_context(Error::ReadError)?)
+        self.reader.read_u64::<LittleEndian>()
+            .change_context(Error::ReadError)
     }
 
     fn read_u16(&mut self) -> Result<u16, Error> {
-        Ok(self.reader.read_u16::<LittleEndian>()
-            .change_context(Error::ReadError)?)
+        self.reader.read_u16::<LittleEndian>()
+            .change_context(Error::ReadError)
     }
 
     fn read_u32(&mut self) -> Result<u32, Error> {
-        Ok(self.reader.read_u32::<LittleEndian>()
-            .change_context(Error::ReadError)?)
+        self.reader.read_u32::<LittleEndian>()
+            .change_context(Error::ReadError)
     }
 
     fn read_exact(&mut self, buf: &mut [u8]) -> Result<(), Error> {
-        Ok(self.reader.read_exact(buf)
-            .change_context(Error::ReadError)?)
+        self.reader.read_exact(buf)
+            .change_context(Error::ReadError)
     }
 }

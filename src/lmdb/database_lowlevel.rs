@@ -1,7 +1,5 @@
 
-use error_stack::Report;
 use error_stack::Result;
-use error_stack::ResultExt;
 
 use super::database::Database;
 
@@ -13,8 +11,8 @@ impl<'a> Database<'a> {
     pub fn read(&mut self, page: usize) -> Result<Leaf, Error> {
         let reader = self.reader.as_mut()
             .ok_or(Error::NoReader)?;
-        let mut reader = reader
-            .lock()
+        let reader = reader
+            .get_mut()
             .unwrap();
         Self::seek_page_unsafe(reader.as_mut(), page)?;
         Self::read_leaf_unsafe(reader.as_mut())
@@ -23,9 +21,9 @@ impl<'a> Database<'a> {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Once;
-
-    use crate::lmdb::reader::{Reader32, Reader64};
+    use crate::lmdb::reader::Reader32;
+    use crate::lmdb::reader::Reader64;
+    
     use super::*;
 
     macro_rules! test_case {
@@ -38,19 +36,20 @@ mod tests {
         };
     }
     
-    static INIT: Once = Once::new();
-
-    pub fn setup() -> () { 
-        INIT.call_once(|| {
-            tracing_subscriber::fmt::fmt()
-                .with_max_level(tracing::Level::DEBUG)
-                .init();
-        });
+    pub fn init_tracing() -> tracing::subscriber::DefaultGuard {
+        let subscriber = tracing_subscriber::fmt::fmt()
+            .with_max_level(tracing::Level::DEBUG)
+            .with_line_number(true)
+            .with_file(true)
+            .with_span_events(tracing_subscriber::fmt::format::FmtSpan::CLOSE)
+            .finish();
+        tracing::subscriber::set_default(subscriber)
     }
 
     #[test]
     fn test_read_meta_64() {
-        setup();
+        let _guard = init_tracing();
+
         let file = std::fs::File::open(test_case!("mender-store.64bits")).unwrap();
         let reader = std::io::BufReader::new(file);
         let mut reader = Reader64::from(reader);
@@ -67,7 +66,8 @@ mod tests {
 
     #[test]
     fn test_read_meta_32() {
-        setup();
+        let _guard = init_tracing();
+    
         let file = std::fs::File::open(test_case!("mender-store.32bits")).unwrap();
         let reader = std::io::BufReader::new(file);
         let mut reader = Reader32::from(reader);

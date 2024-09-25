@@ -21,7 +21,7 @@ impl<'a> Database<'a> {
         let free_lower = reader.read_u16()?;
         let free_upper = reader.read_u16()?;
         let header = model::Header { 
-            pageno: pageno.into(), 
+            pageno: pageno, 
             pad, 
             flags: model::header::Flags::from_bits_retain(flags),
             free_lower,
@@ -71,7 +71,7 @@ impl<'a> Database<'a> {
             ptrs[i as usize] = reader.read_u16()? as usize;
         }
         let header = model::Header2 { 
-            pageno: pageno.into(), 
+            pageno: pageno, 
             pad, 
             flags: model::header::Flags::from_bits_retain(flags),
             free_lower,
@@ -191,13 +191,8 @@ impl<'a> Database<'a> {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Once;
-
-    use crate::lmdb::factory::Factory;
     use crate::lmdb::reader::{Reader32, Reader64};
-
     use super::*;
-    use super::super::model;
 
     macro_rules! test_case {
         ($fname:expr) => {
@@ -209,19 +204,19 @@ mod tests {
         };
     }
 
-    static INIT: Once = Once::new();
-
-    pub fn setup() -> () { 
-        INIT.call_once(|| {
-            tracing_subscriber::fmt::fmt()
-                .with_max_level(tracing::Level::DEBUG)
-                .init();
-        });
+    pub fn init_tracing() -> tracing::subscriber::DefaultGuard {
+        let subscriber = tracing_subscriber::fmt::fmt()
+            .with_max_level(tracing::Level::DEBUG)
+            .with_line_number(true)
+            .with_file(true)
+            .with_span_events(tracing_subscriber::fmt::format::FmtSpan::CLOSE)
+            .finish();
+        tracing::subscriber::set_default(subscriber)
     }
 
     #[test]
     fn test_read_meta_64() {
-        setup();
+        let _guard = init_tracing();
         let file = std::fs::File::open(test_case!("mender-store.64bits")).unwrap();
         let reader = std::io::BufReader::new(file);
         let mut reader = Reader64::from(reader);
@@ -238,7 +233,7 @@ mod tests {
 
     #[test]
     fn test_read_meta_32() {
-        setup();
+        let _guard = init_tracing();
         let file = std::fs::File::open(test_case!("mender-store.32bits")).unwrap();
         let reader = std::io::BufReader::new(file);
         let mut reader = Reader32::from(reader);

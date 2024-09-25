@@ -112,14 +112,10 @@ impl<'a> Database<'a> {
 mod tests {
     use std::sync::Once;
 
-    use tracing::Value;
-
     use crate::lmdb::Factory;
     use crate::lmdb::WordSize;
-    use crate::lmdb::reader::Reader32;
 
     use super::*;
-    use super::super::model;
 
     macro_rules! test_case {
         ($fname:expr) => {
@@ -224,7 +220,7 @@ mod tests {
         let mut db = Factory::open(file.path().into()).unwrap();
         let mut cur = db.read_cursor().unwrap();
         let mut i = 0;
-        while let Some(_) = cur.next().unwrap() {    
+        while cur.next().unwrap().is_some() {    
             i+=1;
         }
         assert_eq!(i, 4096);
@@ -232,6 +228,7 @@ mod tests {
         tracing::debug!("Metadata: {:?}", db.meta);
         assert_ne!(db.meta.last_pgno, 1);
         assert_eq!(db.meta.main.entries, 4096);
+
 
     }
 }

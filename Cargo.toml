@@ -7,7 +7,7 @@ edition = "2021"
 
 [lib]
 name = "lmdb"
-path = "src/lmdb/lib.rs"
+path = "src/lib.rs"
 
 [[bin]]
 name = "lmdb-tool"

@@ -27,15 +27,6 @@ impl From<String> for WordSize {
     }
 }
 
-impl Into<String> for WordSize {
-    fn into(self) -> String {
-        match self {
-            WordSize::Word32 => "32".to_string(),
-            WordSize::Word64 => "64".to_string(),
-        }
-    }
-}
-
 pub struct Factory;
 
 impl Factory {

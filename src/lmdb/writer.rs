@@ -26,28 +26,28 @@ impl<W> DatabaseWriter for Writer32<W> where W: byteorder::WriteBytesExt + std::
     }
 
     fn write_word(&mut self, n: u64) -> Result<(), Error> {
-        Ok(self.writer.write_u32::<LittleEndian>(n as u32)
-            .change_context(Error::WriteError)?)
+        self.writer.write_u32::<LittleEndian>(n as u32)
+            .change_context(Error::WriteError)
     }
 
     fn write_u16(&mut self, n: u16) -> Result<(), Error> {
-        Ok(self.writer.write_u16::<LittleEndian>(n)
-            .change_context(Error::WriteError)?)
+        self.writer.write_u16::<LittleEndian>(n)
+            .change_context(Error::WriteError)
     }
 
     fn write_u32(&mut self, n: u32) -> Result<(), Error> {
-        Ok(self.writer.write_u32::<LittleEndian>(n)
-            .change_context(Error::WriteError)?)
+        self.writer.write_u32::<LittleEndian>(n)
+            .change_context(Error::WriteError)
     }
 
     fn write_exact(&mut self, buf: &[u8]) -> Result<(), Error> {
-        Ok(self.writer.write_all(buf)
-            .change_context(Error::WriteError)?)
+        self.writer.write_all(buf)
+            .change_context(Error::WriteError)
     }
     
     fn flush(&mut self) -> Result<(), Error> {
-        Ok(self.writer.flush()
-            .change_context(Error::WriteError)?)
+        self.writer.flush()
+            .change_context(Error::WriteError)
     }
 
 }
@@ -71,28 +71,28 @@ impl<W> DatabaseWriter for Writer64<W> where W: byteorder::WriteBytesExt + std::
     }
 
     fn write_word(&mut self, n: u64) -> Result<(), Error> {
-        Ok(self.writer.write_u64::<LittleEndian>(n)
-            .change_context(Error::WriteError)?)
+        self.writer.write_u64::<LittleEndian>(n)
+            .change_context(Error::WriteError)
     }
 
     fn write_u16(&mut self, n: u16) -> Result<(), Error> {
-        Ok(self.writer.write_u16::<LittleEndian>(n)
-            .change_context(Error::WriteError)?)
+        self.writer.write_u16::<LittleEndian>(n)
+            .change_context(Error::WriteError)
     }
 
     fn write_u32(&mut self, n: u32) -> Result<(), Error> {
-        Ok(self.writer.write_u32::<LittleEndian>(n)
-            .change_context(Error::WriteError)?)
+        self.writer.write_u32::<LittleEndian>(n)
+            .change_context(Error::WriteError)
     }
 
     fn write_exact(&mut self, buf: &[u8]) -> Result<(), Error> {
-        Ok(self.writer.write_all(buf)
-            .change_context(Error::WriteError)?)
+        self.writer.write_all(buf)
+            .change_context(Error::WriteError)
     }
 
     fn flush(&mut self) -> Result<(), Error> {
-        Ok(self.writer.flush()
-            .change_context(Error::WriteError)?)
+        self.writer.flush()
+            .change_context(Error::WriteError)
     }
 
 }

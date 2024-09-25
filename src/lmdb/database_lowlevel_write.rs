@@ -47,7 +47,7 @@ impl<'a> Database<'a> {
     }
 
     pub(super) fn write_page_header_unsafe<'b>(writer: &'b mut (dyn DatabaseWriter + 'a), header: model::Header) -> Result<(), Error> {
-        writer.write_word(header.pageno as u64)?;
+        writer.write_word(header.pageno)?;
         writer.write_u16(header.pad)?;
         writer.write_u16(header.flags.bits())?;
         writer.write_u16(header.free_lower)?;
@@ -79,7 +79,7 @@ impl<'a> Database<'a> {
         let mut offset = 4096;
         for i in 0..nkeys {
             let node = &leaf.nodes[i];
-            offset = offset - (4 + 2 + 2 +node.data.len() + node.key.len());
+            offset -= 4 + 2 + 2 +node.data.len() + node.key.len();
             ptrs.push(offset);
         }
 
@@ -141,10 +141,8 @@ impl<'a> Database<'a> {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Once;
     use tempfile;
 
-    use crate::lmdb::factory::Factory;
     use crate::lmdb::writer::Writer32;
     use crate::lmdb::writer::Writer64;
 
@@ -154,29 +152,19 @@ mod tests {
     use super::*;
     use super::super::model;
 
-    macro_rules! test_case {
-        ($fname:expr) => {
-            std::path::PathBuf::from(concat!(
-                env!("CARGO_MANIFEST_DIR"),
-                "/resources/",
-                $fname
-            ))
-        };
-    }
-
-    static INIT: Once = Once::new();
-
-    pub fn setup() -> () { 
-        INIT.call_once(|| {
-            tracing_subscriber::fmt::fmt()
-                .with_max_level(tracing::Level::DEBUG)
-                .init();
-        });
+    pub fn init_tracing() -> tracing::subscriber::DefaultGuard {
+        let subscriber = tracing_subscriber::fmt::fmt()
+            .with_max_level(tracing::Level::DEBUG)
+            .with_line_number(true)
+            .with_file(true)
+            .with_span_events(tracing_subscriber::fmt::format::FmtSpan::CLOSE)
+            .finish();
+        tracing::subscriber::set_default(subscriber)
     }
 
     #[test]
     fn test_write_meta_64() {
-        setup();
+        let _guard = init_tracing();
         let file = tempfile::NamedTempFile::new().unwrap();
         let writer = std::io::BufWriter::new(file.reopen().unwrap());
         let mut writer = Writer64::from(writer);
@@ -199,7 +187,7 @@ mod tests {
 
     #[test]
     fn test_write_leaf_64() {
-        setup();
+        let _guard = init_tracing();
         let file = tempfile::NamedTempFile::new().unwrap();
         let writer = std::io::BufWriter::new(file.reopen().unwrap());
         let mut writer = Writer64::from(writer);
@@ -237,7 +225,7 @@ mod tests {
 
     #[test]
     fn test_write_meta_32() {
-        setup();
+        let _guard = init_tracing();
         let file = tempfile::NamedTempFile::new().unwrap();
         let writer = std::io::BufWriter::new(file.reopen().unwrap());
         let mut writer = Writer32::from(writer);
