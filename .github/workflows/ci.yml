@@ -152,6 +152,6 @@ jobs:
   release:
     needs: [build]
     if: startsWith( github.ref, 'refs/tags/')
-    uses: sntns/remora-network/.github/workflows/release.yml@main
+    uses: sntns/lmdb-tool/.github/workflows/release.yml@main
     with:
       tag: ${{ needs.build.outputs.version }}
