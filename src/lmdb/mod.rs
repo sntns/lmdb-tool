@@ -1,4 +1,4 @@
-pub mod dump;  
+pub mod dump;
 mod factory;
 pub use factory::Factory;
 pub use factory::WordSize;

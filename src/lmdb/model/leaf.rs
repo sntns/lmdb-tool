@@ -11,10 +11,9 @@ pub struct Node {
 
 impl fmt::Debug for Node {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-
         let key_s: String = self.key.iter().map(|&c| c as char).collect();
         let data_s: String = self.data.iter().map(|&c| c as char).collect();
-        
+
         f.debug_struct("Node")
             .field("flags", &self.flags)
             .field("key", &key_s)
@@ -25,11 +24,10 @@ impl fmt::Debug for Node {
 
 impl Node {
     pub fn size(&self) -> usize {
-        4 /* data_len */ + 2 /* flags */ + 2 /* key */ 
+        4 /* data_len */ + 2 /* flags */ + 2 /* key */
             + self.key.len() + self.data.len()
     }
 }
-
 
 #[derive(Debug, Clone)]
 pub struct Leaf {

@@ -31,16 +31,12 @@ pub struct Factory;
 
 impl Factory {
     pub fn detect(database: std::path::PathBuf) -> Result<WordSize, Error> {
-        let file = std::fs::File::open(database.clone())
-            .change_context(Error::ReadError)?;
+        let file = std::fs::File::open(database.clone()).change_context(Error::ReadError)?;
         let mut rdr = std::io::BufReader::new(file);
 
-        let pageno = rdr.read_u32::<LE>()
-            .change_context(Error::ReadError)?;
-        let pad = rdr.read_u16::<LE>()
-            .change_context(Error::ReadError)?;
-        let flags = rdr.read_u16::<LE>()
-            .change_context(Error::ReadError)?;
+        let pageno = rdr.read_u32::<LE>().change_context(Error::ReadError)?;
+        let pad = rdr.read_u16::<LE>().change_context(Error::ReadError)?;
+        let flags = rdr.read_u16::<LE>().change_context(Error::ReadError)?;
 
         if pageno == 0 && pad == 0 && flags == 0x8 {
             return Ok(WordSize::Word32);
@@ -48,24 +44,20 @@ impl Factory {
 
         rdr.seek(std::io::SeekFrom::Start(0))
             .change_context(Error::ReadError)?;
-        let pageno = rdr.read_u64::<LE>()
-            .change_context(Error::ReadError)?;
-        let pad = rdr.read_u16::<LE>()
-            .change_context(Error::ReadError)?;
-        let flags = rdr.read_u16::<LE>()
-            .change_context(Error::ReadError)?;
+        let pageno = rdr.read_u64::<LE>().change_context(Error::ReadError)?;
+        let pad = rdr.read_u16::<LE>().change_context(Error::ReadError)?;
+        let flags = rdr.read_u16::<LE>().change_context(Error::ReadError)?;
 
-    if pageno == 0 && pad == 0 && flags == 0x8 {
-        return Ok(WordSize::Word64);
-    }
+        if pageno == 0 && pad == 0 && flags == 0x8 {
+            return Ok(WordSize::Word64);
+        }
 
-    Err(Report::new(Error::InvalidFileFormat)
-        .attach_printable("Neither 32bits nor 64bits page header found"))
+        Err(Report::new(Error::InvalidFileFormat)
+            .attach_printable("Neither 32bits nor 64bits page header found"))
     }
 
     pub fn open<'a>(database: std::path::PathBuf) -> Result<Database<'a>, Error> {
-        let file = std::fs::File::open(database.clone())
-            .change_context(Error::ReadError)?;
+        let file = std::fs::File::open(database.clone()).change_context(Error::ReadError)?;
         let rdr = std::io::BufReader::new(file);
 
         match Self::detect(database.clone())? {
@@ -75,8 +67,7 @@ impl Factory {
     }
 
     pub fn create<'a>(database: std::path::PathBuf, s: WordSize) -> Result<Database<'a>, Error> {
-        let file = std::fs::File::create(database.clone())
-            .change_context(Error::WriteError)?;
+        let file = std::fs::File::create(database.clone()).change_context(Error::WriteError)?;
         let wtr = std::io::BufWriter::new(file);
 
         match s {
@@ -92,11 +83,7 @@ mod tests {
 
     macro_rules! test_case {
         ($fname:expr) => {
-            std::path::PathBuf::from(concat!(
-                env!("CARGO_MANIFEST_DIR"),
-                "/resources/",
-                $fname
-            ))
+            std::path::PathBuf::from(concat!(env!("CARGO_MANIFEST_DIR"), "/resources/", $fname))
         };
     }
 
@@ -110,5 +97,4 @@ mod tests {
         let size = Factory::detect(database).unwrap();
         assert_eq!(size, WordSize::Word64);
     }
-
 }

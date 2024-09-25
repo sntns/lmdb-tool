@@ -2,7 +2,6 @@ use clap::{builder::OsStr, Parser};
 
 mod lmdb;
 
-
 #[derive(Parser, Debug, Clone)]
 #[clap(name = "lmbd-tool", version, author, about)]
 pub struct Cli {
@@ -41,7 +40,7 @@ enum Commands {
 }
 
 fn main() {
-    let opts = Cli::parse();    
+    let opts = Cli::parse();
 
     // Setup tracing & logging
     tracing_subscriber::fmt()
@@ -56,11 +55,11 @@ fn main() {
     tracing::debug!("{:#?}", opts.clone());
 
     match opts.command {
-        Commands::Convert { format , output} => {
+        Commands::Convert { format, output } => {
             println!("Converting to {:?}", format);
             let mut db_in = lmdb::Factory::open(opts.input.clone()).unwrap();
             let mut cur_in = db_in.read_cursor().unwrap();
-            
+
             let mut db_out = lmdb::Factory::create(output.clone(), format).unwrap();
             let mut cur_out = db_out.write_cursor().unwrap();
 
@@ -68,17 +67,15 @@ fn main() {
                 cur_out.push_node(node).unwrap();
             }
             cur_out.commit().unwrap();
-
         }
         Commands::Dump => {
             let mut db = lmdb::Factory::open(opts.input.clone()).unwrap();
             let mut cur = db.read_cursor().unwrap();
             let mut i = 0;
-            while let Some(node) = cur.next().unwrap() {    
+            while let Some(node) = cur.next().unwrap() {
                 println!("#{}: {:#?}", i, node);
-                i+=1;
+                i += 1;
             }
         }
     }
-    
 }

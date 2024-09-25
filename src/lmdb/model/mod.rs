@@ -6,7 +6,7 @@ pub mod metadata;
 pub use metadata::Database;
 pub use metadata::Metadata;
 
-pub(crate) mod lowlevel;
 mod leaf;
+pub(crate) mod lowlevel;
 pub use leaf::Leaf;
 pub use leaf::Node;

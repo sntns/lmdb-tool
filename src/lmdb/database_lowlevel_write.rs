@@ -1,4 +1,3 @@
-
 use error_stack::Report;
 use error_stack::Result;
 use error_stack::ResultExt;
@@ -9,9 +8,9 @@ use super::database::DatabaseReader;
 use super::database::DatabaseWriter;
 use super::error::Error;
 
-use super::model::lowlevel;
 use super::model;
-use super::model::metadata; 
+use super::model::lowlevel;
+use super::model::metadata;
 
 impl<'a> Database<'a> {
     pub(super) fn init_meta_unsafe() -> Result<(model::Metadata, model::Metadata), Error> {
@@ -46,7 +45,10 @@ impl<'a> Database<'a> {
         Ok((meta.clone(), meta.clone()))
     }
 
-    pub(super) fn write_page_header_unsafe<'b>(writer: &'b mut (dyn DatabaseWriter + 'a), header: model::Header) -> Result<(), Error> {
+    pub(super) fn write_page_header_unsafe<'b>(
+        writer: &'b mut (dyn DatabaseWriter + 'a),
+        header: model::Header,
+    ) -> Result<(), Error> {
         writer.write_word(header.pageno)?;
         writer.write_u16(header.pad)?;
         writer.write_u16(header.flags.bits())?;
@@ -55,7 +57,10 @@ impl<'a> Database<'a> {
         Ok(())
     }
 
-    pub(super) fn write_db_unsafe<'b>(writer: &'b mut (dyn DatabaseWriter + 'a), db: metadata::Database) -> Result<(), Error> {
+    pub(super) fn write_db_unsafe<'b>(
+        writer: &'b mut (dyn DatabaseWriter + 'a),
+        db: metadata::Database,
+    ) -> Result<(), Error> {
         writer.write_u32(db.pad)?;
         writer.write_u16(db.flags.bits())?;
         writer.write_u16(db.depth)?;
@@ -67,19 +72,22 @@ impl<'a> Database<'a> {
         Ok(())
     }
 
-    pub(super) fn write_leaf_unsafe<'b>(writer: &'b mut (dyn DatabaseWriter + 'a), leaf: model::Leaf) -> Result<(), Error> {
+    pub(super) fn write_leaf_unsafe<'b>(
+        writer: &'b mut (dyn DatabaseWriter + 'a),
+        leaf: model::Leaf,
+    ) -> Result<(), Error> {
         writer.seek(std::io::SeekFrom::Start((leaf.pageno as u64) * 4096))?;
 
         let head = writer.pos()?;
         tracing::debug!("leaf pos: {}", head);
 
         let nkeys = leaf.nodes.len();
-        
+
         let mut ptrs = Vec::<usize>::new();
         let mut offset = 4096;
         for i in 0..nkeys {
             let node = &leaf.nodes[i];
-            offset -= 4 + 2 + 2 +node.data.len() + node.key.len();
+            offset -= 4 + 2 + 2 + node.data.len() + node.key.len();
             ptrs.push(offset);
         }
 
@@ -87,14 +95,14 @@ impl<'a> Database<'a> {
         writer.write_u16(0)?;
         writer.write_u16(leaf.flags.bits())?;
         let pos = writer.pos()?;
-        writer.write_u16(((nkeys<<1) + (pos-head + 4)) as u16)?;
+        writer.write_u16(((nkeys << 1) + (pos - head + 4)) as u16)?;
         writer.write_u16(offset as u16)?;
         for ptr in ptrs {
             writer.write_u16(ptr as u16)?;
         }
 
         let tail = writer.pos()?;
-        let fill = offset - (tail-head);
+        let fill = offset - (tail - head);
         writer.write_fill(fill)?;
 
         for node in leaf.nodes {
@@ -104,20 +112,27 @@ impl<'a> Database<'a> {
             writer.write_exact(&node.key)?;
             writer.write_exact(&node.data)?;
         }
-        
+
         Ok(())
     }
 
-    pub(super) fn write_meta_unsafe<'b>(writer: &'b mut (dyn DatabaseWriter + 'a), meta: model::Metadata, pageno: usize) -> Result<(), Error> {
+    pub(super) fn write_meta_unsafe<'b>(
+        writer: &'b mut (dyn DatabaseWriter + 'a),
+        meta: model::Metadata,
+        pageno: usize,
+    ) -> Result<(), Error> {
         let head = pageno * 4096;
         writer.seek(std::io::SeekFrom::Start(head as u64))?;
-        Self::write_page_header_unsafe(writer, model::Header {
-            pageno: 0,
-            pad: 0,
-            flags: model::header::Flags::META,
-            free_lower: 0,
-            free_upper: 0,
-        })?;
+        Self::write_page_header_unsafe(
+            writer,
+            model::Header {
+                pageno: 0,
+                pad: 0,
+                flags: model::header::Flags::META,
+                free_lower: 0,
+                free_upper: 0,
+            },
+        )?;
 
         writer.write_u32(meta.magic)?;
         writer.write_u32(meta.version)?;
@@ -131,12 +146,11 @@ impl<'a> Database<'a> {
         writer.write_word(meta.txnid)?;
 
         let tail = writer.pos()?;
-        let fill = 4096 - (tail-head);
+        let fill = 4096 - (tail - head);
         writer.write_fill(fill)?;
 
         Ok(())
     }
-
 }
 
 #[cfg(test)]
@@ -149,8 +163,8 @@ mod tests {
     use crate::lmdb::reader::Reader32;
     use crate::lmdb::reader::Reader64;
 
-    use super::*;
     use super::super::model;
+    use super::*;
 
     pub fn init_tracing() -> tracing::subscriber::DefaultGuard {
         let subscriber = tracing_subscriber::fmt::fmt()
@@ -202,14 +216,18 @@ mod tests {
             nodes.push(model::Node {
                 flags: 0,
                 key: vec![i; 1],
-                data: vec![2*i;1],
+                data: vec![2 * i; 1],
             });
         }
-        Database::write_leaf_unsafe(dw, model::Leaf {
-            pageno: 2,
-            flags: model::header::Flags::LEAF,
-            nodes,
-        }).unwrap();
+        Database::write_leaf_unsafe(
+            dw,
+            model::Leaf {
+                pageno: 2,
+                flags: model::header::Flags::LEAF,
+                nodes,
+            },
+        )
+        .unwrap();
         writer.flush().unwrap();
 
         // Try to read back
@@ -244,8 +262,6 @@ mod tests {
         let dr = &mut reader;
 
         let meta = Database::pick_meta_unsafe(dr).unwrap();
-        tracing::debug!("Metadata: {:?}", meta);  
+        tracing::debug!("Metadata: {:?}", meta);
     }
-    
 }
-            

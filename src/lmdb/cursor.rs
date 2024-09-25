@@ -1,7 +1,7 @@
 use super::database::Database;
+use super::error::Error;
 use super::model;
 use super::model::Node;
-use super::error::Error;
 
 use error_stack::Result;
 
@@ -41,15 +41,13 @@ impl<'a, 'b> ReadCursor<'a, 'b> {
             Some(page) => {
                 let node = &page.nodes[self.node_idx];
                 Ok(Some(node.clone()))
-            },
-            None => {
-                Ok(None)
-            },
+            }
+            None => Ok(None),
         };
 
         // Try to move next
         if let Some(page) = &self.page {
-            self.node_idx+=1;
+            self.node_idx += 1;
             if page.nodes.len() == self.node_idx {
                 self.next_page()?
             }
@@ -72,23 +70,14 @@ impl<'a, 'b> WriteCursor<'a, 'b> {
                 let mut reader = reader.lock().unwrap();
                 Database::seek_page_unsafe(reader.as_mut(), last)?;
                 Database::read_leaf_unsafe(reader.as_mut())?
-            },
-            None => {
-                model::Leaf {
-                    pageno: if last>1 {
-                        last + 1
-                    } else {
-                        2
-                    },
-                    flags: model::header::Flags::LEAF,
-                    nodes: Vec::<model::Node>::new(),
-                }
+            }
+            None => model::Leaf {
+                pageno: if last > 1 { last + 1 } else { 2 },
+                flags: model::header::Flags::LEAF,
+                nodes: Vec::<model::Node>::new(),
             },
         };
-        let cur = WriteCursor {
-            db,
-            page,
-        };
+        let cur = WriteCursor { db, page };
         Ok(cur)
     }
 
@@ -102,8 +91,14 @@ impl<'a, 'b> WriteCursor<'a, 'b> {
     }
 
     pub fn push_node(&mut self, node: model::Node) -> Result<(), Error> {
-        let size = self.page.nodes.iter().map(|node| node.size()).reduce(|a, b| a+b).unwrap_or(0);
-        if size + node.size() >= 4096-6*(self.page.nodes.len()+1) {
+        let size = self
+            .page
+            .nodes
+            .iter()
+            .map(|node| node.size())
+            .reduce(|a, b| a + b)
+            .unwrap_or(0);
+        if size + node.size() >= 4096 - 6 * (self.page.nodes.len() + 1) {
             let mut writer = self.db.writer.as_ref().unwrap().lock().unwrap();
             Database::write_leaf_unsafe(writer.as_mut(), self.page.clone())?;
             self.db.meta.last_pgno = self.page.pageno as u64;
@@ -113,7 +108,7 @@ impl<'a, 'b> WriteCursor<'a, 'b> {
             self.db.meta.main.root = if self.db.meta.main.root == 0 {
                 self.page.pageno as u64
             } else {
-               self.db.meta.main.root
+                self.db.meta.main.root
             };
             self.page = model::Leaf {
                 pageno: self.page.pageno + 1,
@@ -140,7 +135,7 @@ impl<'a, 'b> WriteCursor<'a, 'b> {
         } else {
             meta.main.root
         };
-        Database::write_meta_unsafe(writer.as_mut(), meta, (self.db.meta_id+1)%2)?;
+        Database::write_meta_unsafe(writer.as_mut(), meta, (self.db.meta_id + 1) % 2)?;
         writer.flush()?;
         self.page = model::Leaf {
             pageno: self.page.pageno + 1,

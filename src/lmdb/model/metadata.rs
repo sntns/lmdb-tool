@@ -36,4 +36,3 @@ pub struct Database {
     pub entries: u64,
     pub root: u64,
 }
-    
