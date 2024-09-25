@@ -1,0 +1,157 @@
+name: CI
+
+permissions: write-all
+
+on:
+  workflow_dispatch:
+  push:
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rust Cache
+        uses: actions/cache@v4
+        id: cache
+        continue-on-error: false
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: cargo-
+
+      - name: Install cargo-deb
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: cargo install cargo-deb
+
+      - name: Install cross-rs
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: cargo install cross
+
+  lint:
+    needs: [prepare]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rust Cache
+        uses: actions/cache@v4
+        continue-on-error: false
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: cargo-
+
+      - name: Run Clippy
+        run: cargo clippy --all-targets --all-features
+
+      - name: Check formatting with Rustfmt
+        run: cargo fmt -- --check
+
+  test:
+    needs: [prepare]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rust Cache
+        uses: actions/cache@v4
+        continue-on-error: false
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: cargo-
+
+      - name: Test
+        run: cargo test --verbose
+
+  build:
+    name: ${{ matrix.target }}
+    needs: [prepare, test]
+    strategy:
+      matrix:
+        include:
+          - target: aarch64-unknown-linux-gnu
+            toolchain: aarch64-linux-gnu
+            arch: aarch64
+            pkg: deb
+          - target: armv7-unknown-linux-gnueabihf
+            toolchain: arm-linux-gnueabihf
+            arch: armhf
+            pkg: deb
+          - target: x86_64-unknown-linux-gnu
+            toolchain: x86-64-linux-gnu
+            arch: amd64
+            pkg: deb
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.ghd.outputs.describe }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Git describe
+        id: ghd
+        uses: proudust/gh-describe@v2
+
+      - name: Rust Cache
+        id: cache
+        uses: actions/cache@v4
+        continue-on-error: false
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: cargo-
+
+      - name: Install cargo-deb
+        run: cargo install cargo-deb
+
+      - name: Install cross-rs
+        run: cargo install cross
+
+      - name: Fetch
+        run: cross fetch --locked --target ${{ matrix.target }}
+
+      - name: Build
+        run: cross build --config "version=\"${{ steps.ghd.outputs.describe }}\"" --verbose --release --target ${{ matrix.target }}
+
+      - name: Package
+        id: package
+        run: |
+          cross deb --deb-version ${{ steps.ghd.outputs.describe }}-1 --verbose --no-strip --no-build --profile release --target ${{ matrix.target }}
+          PKG=$(basename $(find target/${{ matrix.target }}/debian -name *.deb))
+          echo "name=$PKG" >> "$GITHUB_OUTPUT"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.package.outputs.name }}
+          path: target/${{ matrix.target }}/debian/${{ steps.package.outputs.name }}
+          if-no-files-found: error
+
+  release:
+    needs: [build]
+    if: startsWith( github.ref, 'refs/tags/')
+    uses: sntns/remora-network/.github/workflows/release.yml@main
+    with:
+      tag: ${{ needs.build.outputs.version }}
