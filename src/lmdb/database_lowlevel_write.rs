@@ -27,7 +27,7 @@ impl<'a> Database<'a> {
                 leaf_pages: 0,
                 overflow_pages: 0,
                 entries: 0,
-                root: 0,
+                root: 2,
             },
             free: model::Database {
                 pad: 4096,
@@ -37,7 +37,7 @@ impl<'a> Database<'a> {
                 leaf_pages: 0,
                 overflow_pages: 0,
                 entries: 0,
-                root: 0,
+                root: 1,
             },
             last_pgno: 0,
             txnid: 0,

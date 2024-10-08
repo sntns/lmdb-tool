@@ -8,10 +8,10 @@ inherit cargo
 # how to get lmdb-tool could be as easy as but default to a git checkout:
 # SRC_URI += "crate://crates.io/lmdb-tool/0.1.0"
 SRC_URI += "git://git@github.com/sntns/lmdb-tool.git;protocol=ssh;nobranch=1;branch=main"
-SRCREV = "b0b896662427b4541449715700d4930908b84f44"
+SRCREV = "4e63156353401a546cb71db7b2b605f185fd53e3"
 S = "${WORKDIR}/git"
 CARGO_SRC_DIR = ""
-PV:append = ".AUTOINC+b0b8966624"
+PV:append = ".AUTOINC+4e63156353"
 
 # please note if you have entries that do not begin with crate://
 # you must change them to how that package can be fetched
