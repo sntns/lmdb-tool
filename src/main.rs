@@ -37,6 +37,7 @@ enum Commands {
         output: std::path::PathBuf,
     },
     Dump,
+    Info,
 }
 
 fn main() {
@@ -76,6 +77,12 @@ fn main() {
                 println!("#{}: {:#?}", i, node);
                 i += 1;
             }
+        },
+        Commands::Info => {
+            let wordize = lmdb::Factory::detect(opts.input.clone()).unwrap();
+            println!("Word size: {:?}", wordize);
+            let db = lmdb::Factory::open(opts.input.clone()).unwrap();
+            println!("{:#?}", db.meta);
         }
     }
 }
