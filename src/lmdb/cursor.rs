@@ -25,7 +25,7 @@ impl<'a, 'b> ReadCursor<'a, 'b> {
     pub fn next_page(&mut self) -> Result<(), Error> {
         let idx = match &self.page {
             Some(page) => page.pageno + 1,
-            None => self.db.meta.main.root as usize,
+            None => self.db.meta.main.root.unwrap_or(2 as u64) as usize,
         };
         self.page = if idx > self.db.meta.last_pgno as usize {
             None
@@ -100,16 +100,13 @@ impl<'a, 'b> WriteCursor<'a, 'b> {
             .unwrap_or(0);
         if size + node.size() >= 4096 - 6 * (self.page.nodes.len() + 1) {
             let mut writer = self.db.writer.as_ref().unwrap().lock().unwrap();
+            tracing::debug!("Writing page: {:#?}", self.page);
             Database::write_leaf_unsafe(writer.as_mut(), self.page.clone())?;
             self.db.meta.last_pgno = self.page.pageno as u64;
             self.db.meta.main.entries += self.page.nodes.len() as u64;
             self.db.meta.main.leaf_pages += 1;
             self.db.meta.main.depth = 1;
-            self.db.meta.main.root = if self.db.meta.main.root == 0 {
-                self.page.pageno as u64
-            } else {
-                self.db.meta.main.root
-            };
+            self.db.meta.main.root = Some(self.db.meta.main.root.unwrap_or(self.page.pageno as u64));
             self.page = model::Leaf {
                 pageno: self.page.pageno + 1,
                 flags: model::header::Flags::LEAF,
@@ -123,6 +120,7 @@ impl<'a, 'b> WriteCursor<'a, 'b> {
 
     pub fn commit(&mut self) -> Result<(), Error> {
         let mut writer = self.db.writer.as_ref().unwrap().lock().unwrap();
+        tracing::debug!("Writing page: {:#?}", self.page);
         Database::write_leaf_unsafe(writer.as_mut(), self.page.clone())?;
         let mut meta = self.db.meta.clone();
         meta.last_pgno = self.page.pageno as u64;
@@ -130,11 +128,8 @@ impl<'a, 'b> WriteCursor<'a, 'b> {
         meta.main.entries += self.page.nodes.len() as u64;
         meta.main.leaf_pages += 1;
         meta.main.depth = 1;
-        meta.main.root = if meta.main.root == 0 {
-            self.page.pageno as u64
-        } else {
-            meta.main.root
-        };
+        meta.main.root = Some(meta.main.root.unwrap_or(self.page.pageno as u64));
+        tracing::debug!("Output: {:#?}", meta);
         Database::write_meta_unsafe(writer.as_mut(), meta, (self.db.meta_id + 1) % 2)?;
         writer.flush()?;
         self.page = model::Leaf {

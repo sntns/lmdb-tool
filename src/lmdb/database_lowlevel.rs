@@ -1,4 +1,5 @@
 use error_stack::Result;
+use error_stack::ResultExt;
 
 use super::database::Database;
 
@@ -12,6 +13,7 @@ impl<'a> Database<'a> {
         let reader = reader.get_mut().unwrap();
         Self::seek_page_unsafe(reader.as_mut(), page)?;
         Self::read_leaf_unsafe(reader.as_mut())
+            .attach_printable(format!("failed to read page {}", page))
     }
 }
 

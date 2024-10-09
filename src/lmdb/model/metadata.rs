@@ -34,5 +34,5 @@ pub struct Database {
     pub leaf_pages: u64,
     pub overflow_pages: u64,
     pub entries: u64,
-    pub root: u64,
+    pub root: Option<u64>,
 }

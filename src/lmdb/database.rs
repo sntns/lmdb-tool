@@ -20,6 +20,7 @@ pub trait DatabaseReader {
         self.seek(std::io::SeekFrom::Current(0))
     }
     fn read_word(&mut self) -> Result<u64, Error>;
+    fn read_opt_word(&mut self) -> Result<Option<u64>, Error>;
     fn read_u16(&mut self) -> Result<u16, Error>;
     fn read_u32(&mut self) -> Result<u32, Error>;
     fn read_exact(&mut self, buf: &mut [u8]) -> Result<(), Error>;
@@ -31,11 +32,12 @@ pub trait DatabaseWriter {
         self.seek(std::io::SeekFrom::Current(0))
     }
     fn write_word(&mut self, n: u64) -> Result<(), Error>;
+    fn write_opt_word(&mut self, n: Option<u64>) -> Result<(), Error>;
     fn write_u16(&mut self, n: u16) -> Result<(), Error>;
     fn write_u32(&mut self, n: u32) -> Result<(), Error>;
     fn write_exact(&mut self, buf: &[u8]) -> Result<(), Error>;
     fn write_fill(&mut self, n: usize) -> Result<(), Error> {
-        let buf = vec![0 as u8; n];
+        let buf = vec![0 as u8; n - 1];
         Ok(self.write_exact(&buf).change_context(Error::WriteError)?)
     }
     fn flush(&mut self) -> Result<(), Error>;

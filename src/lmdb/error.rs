@@ -5,6 +5,7 @@ pub enum Error {
     ReadError,
     WriteError,
     InvalidFileFormat,
+    InvalidPageHeader,
     VersionNotSupported,
     NoReader,
 }
@@ -17,6 +18,7 @@ impl std::fmt::Display for Error {
             Error::ReadError => write!(f, "Read error"),
             Error::WriteError => write!(f, "Write error"),
             Error::InvalidFileFormat => write!(f, "Invalid file format"),
+            Error::InvalidPageHeader => write!(f, "Invalid page header"),
             Error::VersionNotSupported => write!(f, "Version not supported"),
             Error::NoReader => write!(f, "No reader"),
         }

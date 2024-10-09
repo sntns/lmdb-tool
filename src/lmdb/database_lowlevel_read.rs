@@ -42,7 +42,7 @@ impl<'a> Database<'a> {
         let leaf_pages = reader.read_word()?;
         let overflow_pages = reader.read_word()?;
         let entries = reader.read_word()?;
-        let root = reader.read_word()?;
+        let root = reader.read_opt_word()?;
 
         let db = model::Database {
             pad,
@@ -69,6 +69,9 @@ impl<'a> Database<'a> {
         let free_upper = reader.read_u16()?;
         let page_header_size = (reader.pos()? - pos) as u16;
 
+        if free_lower < page_header_size {
+            return Err(Report::new(Error::InvalidPageHeader));
+        }
         let nkeys = (free_lower - page_header_size) >> 1;
         let mut ptrs = vec![0x0; nkeys as usize];
         for i in 0..nkeys {
@@ -142,23 +145,29 @@ impl<'a> Database<'a> {
         reader: &'b mut (dyn DatabaseReader + 'a),
     ) -> Result<model::Leaf, Error> {
         let start = reader.pos()?;
-        let header = Self::read_page_header2_unsafe(reader)?;
+        let header = Self::read_page_header2_unsafe(reader)
+            .attach_printable("failed to read header")?;
+
         if header.flags & model::header::Flags::LEAF != model::header::Flags::LEAF {
-            return Err(Report::new(Error::InvalidFileFormat).attach_printable("Not a leaf page"));
+            return Err(Report::new(Error::InvalidFileFormat)
+                .attach_printable("not a leaf page"));
         }
 
         let mut nodes = Vec::<_>::new();
         for i in 0..header.ptrs.len() {
             reader.seek(std::io::SeekFrom::Start((start + header.ptrs[i]) as u64))?;
 
+            tracing::debug!("Reading node @{}", reader.pos()?);
             let size = reader.read_u32()?;
             let flags = reader.read_u16()?;
             let ksize = reader.read_u16()?;
 
             let mut key = vec![0u8; ksize as usize];
-            reader.read_exact(&mut key)?;
+            reader.read_exact(&mut key)
+                .attach_printable(format!("failed to read key #{} ({})", i, ksize))?;
             let mut data = vec![0u8; size as usize];
-            reader.read_exact(&mut data)?;
+            reader.read_exact(&mut data)
+                .attach_printable(format!("failed to read data #{} ({})", i, size))?;
 
             nodes.push(model::Node { flags, key, data });
         }

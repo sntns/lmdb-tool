@@ -38,6 +38,15 @@ where
             .change_context(Error::WriteError)
     }
 
+    fn write_opt_word(&mut self, n: Option<u64>) -> Result<(), Error> {
+        match n {
+            Some(n) => self.writer.write_u32::<LittleEndian>(n as u32)
+                .change_context(Error::WriteError),
+            None => self.writer.write_i32::<LittleEndian>(-1)
+                .change_context(Error::WriteError),
+        }
+    }
+
     fn write_u16(&mut self, n: u16) -> Result<(), Error> {
         self.writer
             .write_u16::<LittleEndian>(n)
@@ -87,6 +96,15 @@ where
         self.writer
             .write_u64::<LittleEndian>(n)
             .change_context(Error::WriteError)
+    }
+
+    fn write_opt_word(&mut self, n: Option<u64>) -> Result<(), Error> {
+        match n {
+            Some(n) => self.writer.write_u64::<LittleEndian>(n)
+                .change_context(Error::WriteError),
+            None => self.writer.write_i64::<LittleEndian>(-1)
+                .change_context(Error::WriteError),
+        }
     }
 
     fn write_u16(&mut self, n: u16) -> Result<(), Error> {

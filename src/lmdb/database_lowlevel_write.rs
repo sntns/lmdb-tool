@@ -27,7 +27,7 @@ impl<'a> Database<'a> {
                 leaf_pages: 0,
                 overflow_pages: 0,
                 entries: 0,
-                root: 2,
+                root: None,
             },
             free: model::Database {
                 pad: 4096,
@@ -37,9 +37,9 @@ impl<'a> Database<'a> {
                 leaf_pages: 0,
                 overflow_pages: 0,
                 entries: 0,
-                root: 1,
+                root: None,
             },
-            last_pgno: 0,
+            last_pgno: 1,
             txnid: 0,
         };
         Ok((meta.clone(), meta.clone()))
@@ -68,7 +68,7 @@ impl<'a> Database<'a> {
         writer.write_word(db.leaf_pages)?;
         writer.write_word(db.overflow_pages)?;
         writer.write_word(db.entries)?;
-        writer.write_word(db.root)?;
+        writer.write_opt_word(db.root)?;
         Ok(())
     }
 
@@ -84,33 +84,47 @@ impl<'a> Database<'a> {
         let nkeys = leaf.nodes.len();
 
         let mut ptrs = Vec::<usize>::new();
-        let mut offset = 4096;
+        let mut offset = 4096 - 1;
         for i in 0..nkeys {
             let node = &leaf.nodes[i];
+            tracing::debug!("node: size: {}, ksize: {}", node.data.len(), node.key.len());
             offset -= 4 + 2 + 2 + node.data.len() + node.key.len();
             ptrs.push(offset);
         }
+        ptrs.reverse();
+        tracing::debug!("leaf nkeys: {}, ptrs: {:?}", nkeys, ptrs);
 
         writer.write_word(leaf.pageno as u64)?;
         writer.write_u16(0)?;
         writer.write_u16(leaf.flags.bits())?;
         let pos = writer.pos()?;
-        writer.write_u16(((nkeys << 1) + (pos - head + 4)) as u16)?;
-        writer.write_u16(offset as u16)?;
-        for ptr in ptrs {
+
+        let free_lower = ((nkeys << 1) + (pos - head + 4)) as u16;
+        let free_upper = offset as u16;
+        tracing::debug!("leaf free_lower: {}, free_upper: {}", free_lower, free_upper);
+
+        writer.write_u16(free_lower)?;
+        writer.write_u16(free_upper)?;
+        for ptr in ptrs.clone() {
             writer.write_u16(ptr as u16)?;
         }
 
         let tail = writer.pos()?;
         let fill = offset - (tail - head);
-        writer.write_fill(fill)?;
+        writer.write_fill(fill + 1)?;
 
-        for node in leaf.nodes {
+        for i in 0..nkeys {
+            let node = &leaf.nodes[i];
+            let start = head + ptrs[i];
+            writer.seek(std::io::SeekFrom::Start(start as u64))?;
+            tracing::debug!("Writing node @{}", start);
+
             writer.write_u32(node.data.len() as u32)?;
             writer.write_u16(node.flags)?;
             writer.write_u16(node.key.len() as u16)?;
             writer.write_exact(&node.key)?;
             writer.write_exact(&node.data)?;
+            assert!(writer.pos()? - start == 4 + 2 + 2 + node.data.len() + node.key.len());
         }
 
         Ok(())
