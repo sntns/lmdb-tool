@@ -115,7 +115,7 @@ impl<'a> Database<'a> {
 
         for i in 0..nkeys {
             let node = &leaf.nodes[i];
-            let start = head + ptrs[i];
+            let start = head + ptrs[nkeys-1-i];
             writer.seek(std::io::SeekFrom::Start(start as u64))?;
             tracing::debug!("Writing node @{}", start);
 
