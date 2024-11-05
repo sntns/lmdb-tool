@@ -164,6 +164,19 @@ mod tests {
     }
 
     #[test]
+    fn test_read_32_mender() {
+        setup();
+
+        let mut db = Factory::open(test_case!("mender-store.32bits.2")).unwrap();
+        let mut cur = db.read_cursor().unwrap();
+        let mut i = 0;
+        while let Some(node) = cur.next().unwrap() {
+            tracing::debug!("#{}: {:#?}", i, node);
+            i += 1;
+        }
+    }
+
+    #[test]
     fn test_write_32() {
         setup();
         let file = tempfile::NamedTempFile::new().unwrap();

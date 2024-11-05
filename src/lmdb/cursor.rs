@@ -28,11 +28,11 @@ impl<'a, 'b> ReadCursor<'a, 'b> {
             None => self.db.meta.main.root.unwrap_or(2 as u64) as usize,
         };
         self.page = if idx > self.db.meta.last_pgno as usize {
-            None
-        } else {
-            self.node_idx = 0;
-            Some(self.db.read(idx)?)
-        };
+                None
+            } else {
+                self.node_idx = 0;
+                self.db.read(idx).ok()
+            };
         Ok(())
     }
 
