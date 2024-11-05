@@ -1,3 +1,5 @@
+use core::net;
+
 use error_stack::Report;
 use error_stack::Result;
 use error_stack::ResultExt;
@@ -72,6 +74,29 @@ impl<'a> Database<'a> {
         Ok(())
     }
 
+    pub(super) fn write_overflow_unsafe<'b>(
+        writer: &'b mut (dyn DatabaseWriter + 'a),
+        overflow: model::Overflow,
+    ) -> Result<(), Error> {
+        writer.seek(std::io::SeekFrom::Start((overflow.pageno as u64) * 4096))?;
+        let head = writer.pos()?;
+        tracing::debug!("overflow pos: {}", head);
+
+        writer.write_word(overflow.pageno as u64)?;
+        writer.write_u16(0)?;
+        writer.write_u16(model::header::Flags::OVERFLOW.bits())?;
+        writer.write_u16(0)?;
+        writer.write_u16(0)?;
+        
+        writer.write_exact(&overflow.data)?;
+
+        let tail = writer.pos()?;
+        let fill = 4096 - (tail - head);
+        writer.write_fill(fill + 1)?;
+
+        Ok(())
+    }
+
     pub(super) fn write_leaf_unsafe<'b>(
         writer: &'b mut (dyn DatabaseWriter + 'a),
         leaf: model::Leaf,
@@ -87,8 +112,11 @@ impl<'a> Database<'a> {
         let mut offset = 4096 - 1;
         for i in 0..nkeys {
             let node = &leaf.nodes[i];
-            tracing::debug!("node: size: {}, ksize: {}", node.data.len(), node.key.len());
-            offset -= 4 + 2 + 2 + node.data.len() + node.key.len();
+            offset -= 4 + 2 + 2 + node.key.len();
+            match node.data {
+                model::NodeData::Data(ref data) => offset -= data.len(),
+                model::NodeData::Overflow(_, _) => offset -= writer.word_size(),
+            };
             ptrs.push(offset);
         }
         ptrs.reverse();
@@ -117,14 +145,27 @@ impl<'a> Database<'a> {
             let node = &leaf.nodes[i];
             let start = head + ptrs[nkeys-1-i];
             writer.seek(std::io::SeekFrom::Start(start as u64))?;
-            tracing::debug!("Writing node @{}", start);
 
-            writer.write_u32(node.data.len() as u32)?;
-            writer.write_u16(node.flags)?;
-            writer.write_u16(node.key.len() as u16)?;
-            writer.write_exact(&node.key)?;
-            writer.write_exact(&node.data)?;
-            assert!(writer.pos()? - start == 4 + 2 + 2 + node.data.len() + node.key.len());
+            match node.data {
+                model::NodeData::Data(ref data) => {
+                    tracing::debug!("Writing node @{}: key:{}B, data:{}B, flags:{:?}", start, node.key.len(), data.len(), node.flags);
+                    writer.write_u32(data.len() as u32)?;
+                    writer.write_u16(node.flags.bits())?;
+                    writer.write_u16(node.key.len() as u16)?;
+                    writer.write_exact(&node.key)?;
+                    writer.write_exact(&data)?;
+                    assert!(writer.pos()? - start == 4 + 2 + 2 + data.len() + node.key.len());
+                },
+                model::NodeData::Overflow(overflow, size) => {
+                    tracing::debug!("Writing overflow node @{}: key:{}B, overflow:{}, flags:{:?}", start, node.key.len(), overflow, node.flags);
+                    writer.write_u32(size as u32)?;
+                    writer.write_u16(node.flags.bits())?;
+                    writer.write_u16(node.key.len() as u16)?;
+                    writer.write_exact(&node.key)?;
+                    writer.write_word(overflow)?;
+                    assert!(writer.pos()? - start == 4 + 2 + 2 + writer.word_size() + node.key.len());
+                },
+            }
         }
 
         Ok(())
@@ -228,9 +269,9 @@ mod tests {
         let mut nodes = Vec::<model::Node>::new();
         for i in 1..3 {
             nodes.push(model::Node {
-                flags: 0,
+                flags: model::NodeFlags::empty(),
                 key: vec![i; 1],
-                data: vec![2 * i; 1],
+                data: model::NodeData::Data(vec![2 * i; 1]),
             });
         }
         Database::write_leaf_unsafe(

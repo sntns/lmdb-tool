@@ -64,8 +64,8 @@ fn main() {
             let mut db_out = lmdb::Factory::create(output.clone(), format).unwrap();
             let mut cur_out = db_out.write_cursor().unwrap();
 
-            while let Some(node) = cur_in.next().unwrap() {
-                cur_out.push_node(node).unwrap();
+            while let Some(element) = cur_in.next().unwrap() {
+                cur_out.push_element(element).unwrap();
             }
             cur_out.commit().unwrap();
         }
@@ -73,8 +73,8 @@ fn main() {
             let mut db = lmdb::Factory::open(opts.input.clone()).unwrap();
             let mut cur = db.read_cursor().unwrap();
             let mut i = 0;
-            while let Some(node) = cur.next().unwrap() {
-                println!("#{}: {:#?}", i, node);
+            while let Some(element) = cur.next().unwrap() {
+                println!("#{}: {:#?}", i, element);
                 i += 1;
             }
         },

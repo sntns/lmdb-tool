@@ -28,6 +28,10 @@ impl<W> DatabaseWriter for Writer32<W>
 where
     W: byteorder::WriteBytesExt + std::io::Seek,
 {
+    fn word_size(&self) -> usize {
+        4
+    }
+
     fn seek(&mut self, pos: std::io::SeekFrom) -> Result<usize, Error> {
         Ok(self.writer.seek(pos).change_context(Error::WriteError)? as usize)
     }
@@ -88,6 +92,10 @@ impl<W> DatabaseWriter for Writer64<W>
 where
     W: byteorder::WriteBytesExt + std::io::Seek,
 {
+    fn word_size(&self) -> usize {
+        8
+    }
+    
     fn seek(&mut self, pos: std::io::SeekFrom) -> Result<usize, Error> {
         Ok(self.writer.seek(pos).change_context(Error::WriteError)? as usize)
     }

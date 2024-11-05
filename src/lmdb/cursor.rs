@@ -2,6 +2,7 @@ use super::database::Database;
 use super::error::Error;
 use super::model;
 use super::model::Node;
+use super::model::Element;
 
 use error_stack::Result;
 
@@ -23,26 +24,43 @@ impl<'a, 'b> ReadCursor<'a, 'b> {
     }
 
     pub fn next_page(&mut self) -> Result<(), Error> {
+        let root = self.db.meta.main.root.unwrap_or(2 as u64) as usize; 
+        let leaf_pages = self.db.meta.main.leaf_pages as usize;
+        let max = std::cmp::min(self.db.meta.last_pgno as usize + 1, root + leaf_pages);
         let idx = match &self.page {
             Some(page) => page.pageno + 1,
-            None => self.db.meta.main.root.unwrap_or(2 as u64) as usize,
+            None => root as usize,
         };
-        self.page = if idx > self.db.meta.last_pgno as usize {
-                None
-            } else {
+        tracing::debug!("next_page {}: last_pgno:{}, root:{} + leaf_pages:{}", idx, self.db.meta.last_pgno, root, leaf_pages);
+
+        self.page = if idx < max {
                 self.node_idx = 0;
-                self.db.read(idx).ok()
+                Some(self.db.read(idx)?)
+            } else {
+                None
             };
         Ok(())
     }
 
-    pub fn next(&mut self) -> Result<Option<Node>, Error> {
-        let node = match &self.page {
+    pub fn next(&mut self) -> Result<Option<Element>, Error> {
+        let element = match &self.page {
             Some(page) => {
                 let node = &page.nodes[self.node_idx];
-                Ok(Some(node.clone()))
+                match node.data {
+                    model::NodeData::Data(ref data) => Some(Element {
+                        key: node.key.clone(), 
+                        value: data.clone()
+                    }),
+                    model::NodeData::Overflow(overflow, size) => {
+                        let value = self.db.read_overflow(overflow as usize, size)?;
+                        Some(Element {
+                            key: node.key.clone(),
+                            value,
+                        })
+                    },
+                }
             }
-            None => Ok(None),
+            None => None,
         };
 
         // Try to move next
@@ -53,7 +71,7 @@ impl<'a, 'b> ReadCursor<'a, 'b> {
             }
         }
 
-        node
+        Ok(element)
     }
 }
 
@@ -82,12 +100,38 @@ impl<'a, 'b> WriteCursor<'a, 'b> {
     }
 
     pub fn push(&mut self, key: Vec<u8>, data: Vec<u8>) -> Result<(), Error> {
-        let node = model::Node {
-            flags: 0,
-            key: key.clone(),
-            data: data.clone(),
-        };
-        self.push_node(node)
+        self.push_element(Element { key, value: data })
+    }
+
+    pub fn push_element(&mut self, element: Element) -> Result<(), Error> {
+        if element.value.len() > 2048 {
+            // Store in overflow page
+            let mut writer  = self.db.writer.as_ref().unwrap().lock().unwrap();
+            
+            
+            let pageno = self.page.pageno as u64 + 1;
+            self.db.meta.main.overflow_pages += 1;
+            self.db.meta.last_pgno = pageno;
+            Database::write_overflow_unsafe(writer.as_mut(), model::Overflow {
+                pageno,
+                data: element.value.clone(),                
+            })?;
+            drop(writer);
+
+            let node = model::Node {
+                flags: model::NodeFlags::BIGDATA,
+                key: element.key.clone(),
+                data: model::NodeData::Overflow(pageno, element.value.len()),
+            };
+            self.push_node(node)
+        } else {
+            let node = model::Node {
+                flags: model::NodeFlags::empty(),
+                key: element.key.clone(),
+                data: model::NodeData::Data(element.value.clone()),
+            };
+            self.push_node(node)    
+        }
     }
 
     pub fn push_node(&mut self, node: model::Node) -> Result<(), Error> {
@@ -100,13 +144,15 @@ impl<'a, 'b> WriteCursor<'a, 'b> {
             .unwrap_or(0);
         if size + node.size() >= 4096 - 6 * (self.page.nodes.len() + 1) {
             let mut writer = self.db.writer.as_ref().unwrap().lock().unwrap();
-            tracing::debug!("Writing page: {:#?}", self.page);
+            tracing::debug!("Writing leaf page: {:#?}", self.page);
             Database::write_leaf_unsafe(writer.as_mut(), self.page.clone())?;
-            self.db.meta.last_pgno = self.page.pageno as u64;
+            self.db.meta.last_pgno = std::cmp::max(self.db.meta.last_pgno, self.page.pageno as u64);
             self.db.meta.main.entries += self.page.nodes.len() as u64;
             self.db.meta.main.leaf_pages += 1;
             self.db.meta.main.depth = 1;
             self.db.meta.main.root = Some(self.db.meta.main.root.unwrap_or(self.page.pageno as u64));
+            tracing::debug!("Updated meta: {:#?}", self.db.meta);
+
             self.page = model::Leaf {
                 pageno: self.page.pageno + 1,
                 flags: model::header::Flags::LEAF,
@@ -123,7 +169,7 @@ impl<'a, 'b> WriteCursor<'a, 'b> {
         tracing::debug!("Writing page: {:#?}", self.page);
         Database::write_leaf_unsafe(writer.as_mut(), self.page.clone())?;
         let mut meta = self.db.meta.clone();
-        meta.last_pgno = self.page.pageno as u64;
+        meta.last_pgno = std::cmp::max(meta.last_pgno, self.page.pageno as u64);
         meta.txnid += 1;
         meta.main.entries += self.page.nodes.len() as u64;
         meta.main.leaf_pages += 1;

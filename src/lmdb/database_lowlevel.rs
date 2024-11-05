@@ -15,6 +15,14 @@ impl<'a> Database<'a> {
         Self::read_leaf_unsafe(reader.as_mut())
             .attach_printable(format!("failed to read page {}", page))
     }
+
+    pub fn read_overflow(&mut self, page: usize, size: usize) -> Result<Vec<u8>, Error> {
+        let reader = self.reader.as_mut().ok_or(Error::NoReader)?;
+        let reader = reader.get_mut().unwrap();
+        Self::seek_page_unsafe(reader.as_mut(), page)?;
+        Self::read_overflow_unsafe(reader.as_mut(), size)
+            .attach_printable(format!("failed to read overflow page {}", page))
+    }
 }
 
 #[cfg(test)]

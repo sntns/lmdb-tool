@@ -6,7 +6,7 @@ bitflags! {
     pub struct Flags: u16 {
         const BRANCH = 0x1;
         const LEAF = 0x2;
-        const OVERFLOW = 0x3;
+        const OVERFLOW = 0x4;
         const META = 0x8;
         const DIRTY = 0x10;
         const LEAF2 = 0x20;

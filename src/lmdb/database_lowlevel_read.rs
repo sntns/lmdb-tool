@@ -9,7 +9,6 @@ use super::error::Error;
 
 use super::model;
 use super::model::lowlevel;
-use super::model::Leaf;
 
 impl<'a> Database<'a> {
     pub(super) fn read_page_header_unsafe<'b>(
@@ -141,6 +140,24 @@ impl<'a> Database<'a> {
         Ok(metadata)
     }
 
+    pub(super) fn read_overflow_unsafe<'b>(
+        reader: &'b mut (dyn DatabaseReader + 'a),
+        size: usize,
+    ) -> Result<Vec<u8>, Error> {
+        let header = Self::read_page_header_unsafe(reader)
+            .attach_printable("failed to read header")?;
+
+        if header.flags & model::header::Flags::OVERFLOW != model::header::Flags::OVERFLOW {
+            return Err(Report::new(Error::InvalidFileFormat)
+                .attach_printable("not an overflow page"));
+        }
+
+        let mut data = vec![0u8; size];
+        reader.read_exact(&mut data)
+            .attach_printable(format!("failed to read overflow page of size {}", size))?;
+        Ok(data)
+    }
+
     pub(super) fn read_leaf_unsafe<'b>(
         reader: &'b mut (dyn DatabaseReader + 'a),
     ) -> Result<model::Leaf, Error> {
@@ -161,15 +178,30 @@ impl<'a> Database<'a> {
             let size = reader.read_u32()?;
             let flags = reader.read_u16()?;
             let ksize = reader.read_u16()?;
+            let flags = model::NodeFlags::from_bits_retain(flags);
 
             let mut key = vec![0u8; ksize as usize];
             reader.read_exact(&mut key)
                 .attach_printable(format!("failed to read key #{} ({})", i, ksize))?;
-            let mut data = vec![0u8; size as usize];
-            reader.read_exact(&mut data)
-                .attach_printable(format!("failed to read data #{} ({})", i, size))?;
+            
+            let data = if flags.contains(model::NodeFlags::BIGDATA) {
+                // Read overflow page number
+                let overflow = reader.read_word()
+                    .attach_printable(format!("failed to read overflow page #{}", i))?;
+                model::NodeData::Overflow(overflow, size as usize)
+            } else {
+                // Simple read
+                let mut data = vec![0u8; size as usize];
+                reader.read_exact(&mut data)
+                    .attach_printable(format!("failed to read data #{} ({})", i, size))?;
+                model::NodeData::Data(data)
+            };
 
-            nodes.push(model::Node { flags, key, data });
+            nodes.push(model::Node {
+                flags,
+                key,
+                data,
+            });
         }
 
         let leaf = model::Leaf {

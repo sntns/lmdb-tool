@@ -27,6 +27,7 @@ pub trait DatabaseReader {
 }
 
 pub trait DatabaseWriter {
+    fn word_size(&self) -> usize;
     fn seek(&mut self, pos: std::io::SeekFrom) -> Result<usize, Error>;
     fn pos(&mut self) -> Result<usize, Error> {
         self.seek(std::io::SeekFrom::Current(0))
