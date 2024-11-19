@@ -64,7 +64,10 @@ fn main() {
             let mut db_out = lmdb::Factory::create(output.clone(), format).unwrap();
             let mut cur_out = db_out.write_cursor().unwrap();
 
-            while let Some(element) = cur_in.next().unwrap() {
+            while let Some(mut element) = cur_in.next().unwrap() {
+                if element.value == "null".as_bytes() {
+                    element.value = vec![];
+                }
                 cur_out.push_element(element).unwrap();
             }
             cur_out.commit().unwrap();
