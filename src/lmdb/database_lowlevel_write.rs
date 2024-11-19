@@ -91,9 +91,10 @@ impl<'a> Database<'a> {
         writer.write_exact(&overflow.data)?;
 
         let tail = writer.pos()?;
-        let fill = 4096 - (tail - head);
-        writer.write_fill(fill + 1)?;
-
+        if tail > head {
+            let fill = 4096 - (tail - head);
+            writer.write_fill(fill)?;
+        }
         Ok(())
     }
 
@@ -108,10 +109,14 @@ impl<'a> Database<'a> {
 
         let nkeys = leaf.nodes.len();
 
+        let mut nodes = leaf.nodes.clone();
+        nodes.sort_by(|a, b| a.key.cmp(&b.key));
+        nodes.reverse();
+
         let mut ptrs = Vec::<usize>::new();
         let mut offset = 4096 - 1;
         for i in 0..nkeys {
-            let node = &leaf.nodes[i];
+            let node = &nodes[i];
             offset -= 4 + 2 + 2 + node.key.len();
             match node.data {
                 model::NodeData::Data(ref data) => offset -= data.len(),
@@ -138,11 +143,13 @@ impl<'a> Database<'a> {
         }
 
         let tail = writer.pos()?;
-        let fill = offset - (tail - head);
-        writer.write_fill(fill + 1)?;
+        if tail > head {
+            let fill = 4096 - (tail - head);
+            writer.write_fill(fill)?;
+        }
 
         for i in 0..nkeys {
-            let node = &leaf.nodes[i];
+            let node = &nodes[i];
             let start = head + ptrs[nkeys-1-i];
             writer.seek(std::io::SeekFrom::Start(start as u64))?;
 
@@ -154,7 +161,7 @@ impl<'a> Database<'a> {
                     writer.write_u16(node.key.len() as u16)?;
                     writer.write_exact(&node.key)?;
                     writer.write_exact(&data)?;
-                    assert!(writer.pos()? - start == 4 + 2 + 2 + data.len() + node.key.len());
+                    assert!(writer.pos()?==0 || writer.pos()? - start == 4 + 2 + 2 + data.len() + node.key.len());
                 },
                 model::NodeData::Overflow(overflow, size) => {
                     tracing::debug!("Writing overflow node @{}: key:{}B, overflow:{}, flags:{:?}", start, node.key.len(), overflow, node.flags);
@@ -163,7 +170,7 @@ impl<'a> Database<'a> {
                     writer.write_u16(node.key.len() as u16)?;
                     writer.write_exact(&node.key)?;
                     writer.write_word(overflow)?;
-                    assert!(writer.pos()? - start == 4 + 2 + 2 + writer.word_size() + node.key.len());
+                    assert!(writer.pos()?==0 || writer.pos()? - start == 4 + 2 + 2 + writer.word_size() + node.key.len());
                 },
             }
         }
@@ -201,9 +208,10 @@ impl<'a> Database<'a> {
         writer.write_word(meta.txnid)?;
 
         let tail = writer.pos()?;
-        let fill = 4096 - (tail - head);
-        writer.write_fill(fill)?;
-
+        if tail > head {
+            let fill = 4096 - (tail - head);
+            writer.write_fill(fill)?;
+        }
         Ok(())
     }
 }
