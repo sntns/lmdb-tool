@@ -2,29 +2,28 @@
 
 ## Overview
 
-The LMDB Convert Tool is a utility designed to facilitate the conversion of data between different formats using the Lightning Memory-Mapped Database (LMDB). This tool is essential for developers and data engineers who need to efficiently manage and transform large datasets stored in LMDB.
+The LMDB Management Tool is a utility designed to facilitate the conversion of data between different formats using the Lightning Memory-Mapped Database (LMDB). This tool is essential for developers and data engineers who need to efficiently manage and transform large datasets stored in LMDB.
 
 ## Features
 
-- **Data Conversion**: Convert data between various formats such as JSON, CSV, and LMDB.
-- **High Performance**: Leverages LMDB's high-speed database capabilities for fast data processing.
-- **Scalability**: Handles large datasets with ease.
-- **User-Friendly**: Simple command-line interface for ease of use.
-
+- **Data Conversion**: Convert data for 32bits to 64bits or vice versa.
+- **Low Performance**: This implementation is not optimized for performance, as pages are read and written one at a time. For large datasets, consider using a more efficient implementation.
+- **Cross-Platform**: The LMDB Tool is compatible with Windows, macOS, and Linux operating systems.
+- **Easy to Use**: The LMDB Tool is designed to be user-friendly and easy to use, with a simple command-line interface.
 
 ## Installation
 
-To install the LMDB Convert Tool, ensure you have [Rust](https://www.rust-lang.org/) installed on your system. Then, run the following command:
+To install the LMDB Tool, ensure you have [Rust](https://www.rust-lang.org/) installed on your system. Then, run the following command:
 
 ```sh
-cargo install lmdb-convert
+cargo install lmdb
 ```
 
 ## Usage
 The command is structured with commands. Common argument is `--input` which is the path to the input file. The command is the action to be performed on the input file.
 
 ```sh
-lmdb-tools --input <input_file> <command> 
+lmdb --input <input_file> <command> 
 ```
 
 ### Commands
@@ -34,7 +33,7 @@ lmdb-tools --input <input_file> <command>
 The `convert` command is used to convert data between different architectures, either from 32bits to 64bits or vice versa.
 
 ```sh
-lmdb-tools --input <input_file> convert <output_file> --format <format>
+lmdb --input <input_file> convert <output_file> --format <format>
 ```
 
 with:

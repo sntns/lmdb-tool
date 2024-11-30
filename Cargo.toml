@@ -1,6 +1,6 @@
 [package]
-name = "lmdb-tool"
-homepage = "https://github.com/sntns/lmdb-tool"
+name = "lmdb"
+homepage = "https://github.com/sntns/lmdb"
 version = "0.1.0"
 license = "MIT"
 edition = "2021"
@@ -10,7 +10,7 @@ name = "lmdb"
 path = "src/lib.rs"
 
 [[bin]]
-name = "lmdb-tool"
+name = "lmdb"
 path = "src/main.rs"
 
 [package.metadata.deb]
@@ -18,33 +18,35 @@ maintainer = "Lionel Molinier <lionel@sentiens.fr>"
 copyright = "2024, Sentiens SAS <copyright@sentiens.fr>"
 license-file = ["LICENSE", "4"]
 extended-description = """\
-LMBD Tool is a command line tool to manage LMDB databases.
+LMBD is a command line tool to manage LMDB databases.
 """
 depends = "$auto"
 priority = "optional"
 assets = [
     [
-        "target/release/lmdb-tool",
+        "target/release/lmdb",
         "usr/sbin/",
         "755",
     ],
     [
         "README.md",
-        "usr/share/doc/lmdb-tool/README",
+        "usr/share/doc/lmdb/README",
         "644",
     ],
     [
         "LICENSE",
-        "usr/share/doc/lmdb-tool/LICENSE",
+        "usr/share/doc/lmdb/LICENSE",
         "644",
     ],
 ]
 
 [dependencies]
+base64 = "0.22.1"
 bitflags = "2.6.0"
 byteorder = "1.5.0"
 clap = { version = "4.5.17", features = ["cargo", "derive"] }
 error-stack = "0.5.0"
+json = "0.12.4"
 tempfile = "3.12.0"
 
 [dependencies.tracing]

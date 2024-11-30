@@ -1,6 +1,7 @@
 use byteorder::ReadBytesExt;
 use byteorder::LE;
 use std::io::Seek;
+use clap;
 
 use error_stack::Report;
 use error_stack::Result;
@@ -11,7 +12,7 @@ use super::error::Error;
 use super::reader;
 use super::writer;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(clap::ValueEnum, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WordSize {
     Word32,
     Word64,
@@ -23,6 +24,15 @@ impl From<String> for WordSize {
             "32" => WordSize::Word32,
             "64" => WordSize::Word64,
             _ => panic!("Invalid word size"),
+        }
+    }
+}
+
+impl Into<u8> for WordSize {
+    fn into(self) -> u8 {
+        match self {
+            WordSize::Word32 => 32,
+            WordSize::Word64 => 64,
         }
     }
 }
