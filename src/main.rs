@@ -1,6 +1,6 @@
-use json;
 use base64::engine::general_purpose::STANDARD as base64;
 use base64::Engine;
+use json;
 use std::{collections::HashMap, vec};
 
 use clap::{builder::OsStr, Parser};
@@ -22,7 +22,9 @@ pub struct Cli {
 
 #[derive(Parser, Debug, Clone)]
 enum Commands {
-    #[clap(about = "Convert a database to another bitsize format. This is useful for converting a 32-bit database to a 64-bit database without losing data.")]
+    #[clap(
+        about = "Convert a database to another bitsize format. This is useful for converting a 32-bit database to a 64-bit database without losing data."
+    )]
     Convert {
         #[clap(value_name = "source", help = "The source file to convert")]
         input: std::path::PathBuf,
@@ -30,7 +32,12 @@ enum Commands {
         #[clap(value_name = "destination", help = "The destination file to write to")]
         output: std::path::PathBuf,
 
-        #[clap(short, long, default_value = "word64", help = "The word size to convert to")]
+        #[clap(
+            short,
+            long,
+            default_value = "word64",
+            help = "The word size to convert to"
+        )]
         format: lmdb::WordSize,
     },
     Dump {
@@ -70,7 +77,11 @@ fn main() {
     tracing::debug!("{:#?}", opts.clone());
 
     match opts.command {
-        Commands::Convert { input, output, format } => {
+        Commands::Convert {
+            input,
+            output,
+            format,
+        } => {
             let mut output = output.clone();
             if input == output {
                 output = output.clone().with_extension("lmdb-convert-tmp");
@@ -92,7 +103,7 @@ fn main() {
                     cur_out.push_element(element).unwrap();
                 }
                 cur_out.commit().unwrap();
-                
+
                 db_in.close().unwrap();
                 db_out.close().unwrap();
 
@@ -106,23 +117,33 @@ fn main() {
                 tracing::info!("No conversion needed");
             }
         }
-        Commands::Dump { input, string_key, string_value, json } => {
+        Commands::Dump {
+            input,
+            string_key,
+            string_value,
+            json,
+        } => {
             let mut db = lmdb::Factory::open(input.clone()).unwrap();
             let mut cur = db.read_cursor().unwrap();
-            let items: HashMap<String, String> = cur.next().unwrap().iter().map(|element| {
-                let key = if string_key {
-                    String::from_utf8_lossy(&element.key).to_string()
-                } else {
-                    base64.encode(&element.key)
-                };
-                let value = if string_value {
-                    String::from_utf8_lossy(&element.value).to_string()
-                } else {
-                    base64.encode(&element.value)
-                };
-                (key, value)
-            }).collect();
-            
+            let items: HashMap<String, String> = cur
+                .next()
+                .unwrap()
+                .iter()
+                .map(|element| {
+                    let key = if string_key {
+                        String::from_utf8_lossy(&element.key).to_string()
+                    } else {
+                        base64.encode(&element.key)
+                    };
+                    let value = if string_value {
+                        String::from_utf8_lossy(&element.value).to_string()
+                    } else {
+                        base64.encode(&element.value)
+                    };
+                    (key, value)
+                })
+                .collect();
+
             if json {
                 let json_string = json::stringify_pretty(items, 2);
                 println!("{}", json_string);
@@ -132,8 +153,8 @@ fn main() {
             for (key, value) in items {
                 println!("{}: {}", key, value);
             }
-        },
-        Commands::Info { input, json }=> {
+        }
+        Commands::Info { input, json } => {
             let wordize = lmdb::Factory::detect(input.clone()).unwrap();
             let db = lmdb::Factory::open(input.clone()).unwrap();
             let out = json::object! {
@@ -152,7 +173,10 @@ fn main() {
                 return;
             }
             println!("Word size: {:?}", wordize);
-            println!("Pages: leaf:{:?}, branch:{:?}, overflow:{:?}", db.meta.main.leaf_pages, db.meta.main.branch_pages, db.meta.main.overflow_pages);
+            println!(
+                "Pages: leaf:{:?}, branch:{:?}, overflow:{:?}",
+                db.meta.main.leaf_pages, db.meta.main.branch_pages, db.meta.main.overflow_pages
+            );
             println!("Root: {:?}", db.meta.main.root);
             println!("Last: {:?}", db.meta.last_pgno);
             println!("Entries: {:?}", db.meta.main.entries);

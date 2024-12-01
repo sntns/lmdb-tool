@@ -1,8 +1,8 @@
 use super::database::Database;
 use super::error::Error;
 use super::model;
-use super::model::Node;
 use super::model::Element;
+use super::model::Node;
 
 use error_stack::Result;
 
@@ -24,21 +24,27 @@ impl<'a, 'b> ReadCursor<'a, 'b> {
     }
 
     pub fn next_page(&mut self) -> Result<(), Error> {
-        let root = self.db.meta.main.root.unwrap_or(2 as u64) as usize; 
+        let root = self.db.meta.main.root.unwrap_or(2 as u64) as usize;
         let leaf_pages = self.db.meta.main.leaf_pages as usize;
         let max = std::cmp::min(self.db.meta.last_pgno as usize + 1, root + leaf_pages);
         let idx = match &self.page {
             Some(page) => page.pageno + 1,
             None => root as usize,
         };
-        tracing::debug!("next_page {}: last_pgno:{}, root:{} + leaf_pages:{}", idx, self.db.meta.last_pgno, root, leaf_pages);
+        tracing::debug!(
+            "next_page {}: last_pgno:{}, root:{} + leaf_pages:{}",
+            idx,
+            self.db.meta.last_pgno,
+            root,
+            leaf_pages
+        );
 
         self.page = if idx < max {
-                self.node_idx = 0;
-                Some(self.db.read(idx)?)
-            } else {
-                None
-            };
+            self.node_idx = 0;
+            Some(self.db.read(idx)?)
+        } else {
+            None
+        };
         Ok(())
     }
 
@@ -48,8 +54,8 @@ impl<'a, 'b> ReadCursor<'a, 'b> {
                 let node = &page.nodes[self.node_idx];
                 match node.data {
                     model::NodeData::Data(ref data) => Some(Element {
-                        key: node.key.clone(), 
-                        value: data.clone()
+                        key: node.key.clone(),
+                        value: data.clone(),
                     }),
                     model::NodeData::Overflow(overflow, size) => {
                         let value = self.db.read_overflow(overflow as usize, size)?;
@@ -57,7 +63,7 @@ impl<'a, 'b> ReadCursor<'a, 'b> {
                             key: node.key.clone(),
                             value,
                         })
-                    },
+                    }
                 }
             }
             None => None,
@@ -106,16 +112,18 @@ impl<'a, 'b> WriteCursor<'a, 'b> {
     pub fn push_element(&mut self, element: Element) -> Result<(), Error> {
         if element.value.len() > 2048 {
             // Store in overflow page
-            let mut writer  = self.db.writer.as_ref().unwrap().lock().unwrap();
-            
-            
+            let mut writer = self.db.writer.as_ref().unwrap().lock().unwrap();
+
             let pageno = self.page.pageno as u64 + 1;
             self.db.meta.main.overflow_pages += 1;
             self.db.meta.last_pgno = pageno;
-            Database::write_overflow_unsafe(writer.as_mut(), model::Overflow {
-                pageno,
-                data: element.value.clone(),                
-            })?;
+            Database::write_overflow_unsafe(
+                writer.as_mut(),
+                model::Overflow {
+                    pageno,
+                    data: element.value.clone(),
+                },
+            )?;
             drop(writer);
 
             let node = model::Node {
@@ -130,7 +138,7 @@ impl<'a, 'b> WriteCursor<'a, 'b> {
                 key: element.key.clone(),
                 data: model::NodeData::Data(element.value.clone()),
             };
-            self.push_node(node)    
+            self.push_node(node)
         }
     }
 
@@ -150,7 +158,8 @@ impl<'a, 'b> WriteCursor<'a, 'b> {
             self.db.meta.main.entries += self.page.nodes.len() as u64;
             self.db.meta.main.leaf_pages += 1;
             self.db.meta.main.depth = 1;
-            self.db.meta.main.root = Some(self.db.meta.main.root.unwrap_or(self.page.pageno as u64));
+            self.db.meta.main.root =
+                Some(self.db.meta.main.root.unwrap_or(self.page.pageno as u64));
             tracing::debug!("Updated meta: {:#?}", self.db.meta);
 
             self.page = model::Leaf {

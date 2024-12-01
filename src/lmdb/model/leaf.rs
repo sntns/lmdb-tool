@@ -1,5 +1,5 @@
-use core::fmt;
 use bitflags::bitflags;
+use core::fmt;
 
 use super::header::Flags;
 
@@ -38,14 +38,13 @@ impl fmt::Debug for Node {
                     .field("data", &data_s)
                     .finish()
             }
-            NodeData::Overflow(overflow, size) => {
-                f.debug_struct("OverflowNode")
-                    .field("flags", &self.flags)
-                    .field("key", &key_s)
-                    .field("overflow-page", &overflow)
-                    .field("data-size", &size)
-                    .finish()
-            }
+            NodeData::Overflow(overflow, size) => f
+                .debug_struct("OverflowNode")
+                .field("flags", &self.flags)
+                .field("key", &key_s)
+                .field("overflow-page", &overflow)
+                .field("data-size", &size)
+                .finish(),
         }
     }
 }

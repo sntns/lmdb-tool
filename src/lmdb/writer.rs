@@ -44,9 +44,13 @@ where
 
     fn write_opt_word(&mut self, n: Option<u64>) -> Result<(), Error> {
         match n {
-            Some(n) => self.writer.write_u32::<LittleEndian>(n as u32)
+            Some(n) => self
+                .writer
+                .write_u32::<LittleEndian>(n as u32)
                 .change_context(Error::WriteError),
-            None => self.writer.write_i32::<LittleEndian>(-1)
+            None => self
+                .writer
+                .write_i32::<LittleEndian>(-1)
                 .change_context(Error::WriteError),
         }
     }
@@ -95,7 +99,7 @@ where
     fn word_size(&self) -> usize {
         8
     }
-    
+
     fn seek(&mut self, pos: std::io::SeekFrom) -> Result<usize, Error> {
         Ok(self.writer.seek(pos).change_context(Error::WriteError)? as usize)
     }
@@ -108,9 +112,13 @@ where
 
     fn write_opt_word(&mut self, n: Option<u64>) -> Result<(), Error> {
         match n {
-            Some(n) => self.writer.write_u64::<LittleEndian>(n)
+            Some(n) => self
+                .writer
+                .write_u64::<LittleEndian>(n)
                 .change_context(Error::WriteError),
-            None => self.writer.write_i64::<LittleEndian>(-1)
+            None => self
+                .writer
+                .write_i64::<LittleEndian>(-1)
                 .change_context(Error::WriteError),
         }
     }

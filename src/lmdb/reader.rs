@@ -40,7 +40,9 @@ where
     }
 
     fn read_opt_word(&mut self) -> Result<Option<u64>, Error> {
-        let n = self.reader.read_i32::<LittleEndian>()
+        let n = self
+            .reader
+            .read_i32::<LittleEndian>()
             .change_context(Error::ReadError)?;
         if n < 0 {
             Ok(None)
@@ -97,7 +99,9 @@ where
     }
 
     fn read_opt_word(&mut self) -> Result<Option<u64>, Error> {
-        let n = self.reader.read_i64::<LittleEndian>()
+        let n = self
+            .reader
+            .read_i64::<LittleEndian>()
             .change_context(Error::ReadError)?;
         if n < 0 {
             Ok(None)

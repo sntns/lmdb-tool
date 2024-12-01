@@ -6,7 +6,6 @@ pub struct Element {
     pub value: Vec<u8>,
 }
 
-
 impl fmt::Debug for Element {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let key_s: String = self.key.iter().map(|&c| c as char).collect();

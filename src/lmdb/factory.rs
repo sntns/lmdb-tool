@@ -1,7 +1,7 @@
 use byteorder::ReadBytesExt;
 use byteorder::LE;
-use std::io::Seek;
 use clap;
+use std::io::Seek;
 
 use error_stack::Report;
 use error_stack::Result;

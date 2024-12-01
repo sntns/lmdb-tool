@@ -87,7 +87,7 @@ impl<'a> Database<'a> {
         writer.write_u16(model::header::Flags::OVERFLOW.bits())?;
         writer.write_u16(0)?;
         writer.write_u16(0)?;
-        
+
         writer.write_exact(&overflow.data)?;
 
         let tail = writer.pos()?;
@@ -134,7 +134,11 @@ impl<'a> Database<'a> {
 
         let free_lower = ((nkeys << 1) + (pos - head + 4)) as u16;
         let free_upper = offset as u16;
-        tracing::debug!("leaf free_lower: {}, free_upper: {}", free_lower, free_upper);
+        tracing::debug!(
+            "leaf free_lower: {}, free_upper: {}",
+            free_lower,
+            free_upper
+        );
 
         writer.write_u16(free_lower)?;
         writer.write_u16(free_upper)?;
@@ -150,28 +154,47 @@ impl<'a> Database<'a> {
 
         for i in 0..nkeys {
             let node = &nodes[i];
-            let start = head + ptrs[nkeys-1-i];
+            let start = head + ptrs[nkeys - 1 - i];
             writer.seek(std::io::SeekFrom::Start(start as u64))?;
 
             match node.data {
                 model::NodeData::Data(ref data) => {
-                    tracing::debug!("Writing node @{}: key:{}B, data:{}B, flags:{:?}", start, node.key.len(), data.len(), node.flags);
+                    tracing::debug!(
+                        "Writing node @{}: key:{}B, data:{}B, flags:{:?}",
+                        start,
+                        node.key.len(),
+                        data.len(),
+                        node.flags
+                    );
                     writer.write_u32(data.len() as u32)?;
                     writer.write_u16(node.flags.bits())?;
                     writer.write_u16(node.key.len() as u16)?;
                     writer.write_exact(&node.key)?;
                     writer.write_exact(&data)?;
-                    assert!(writer.pos()?==0 || writer.pos()? - start == 4 + 2 + 2 + data.len() + node.key.len());
-                },
+                    assert!(
+                        writer.pos()? == 0
+                            || writer.pos()? - start == 4 + 2 + 2 + data.len() + node.key.len()
+                    );
+                }
                 model::NodeData::Overflow(overflow, size) => {
-                    tracing::debug!("Writing overflow node @{}: key:{}B, overflow:{}, flags:{:?}", start, node.key.len(), overflow, node.flags);
+                    tracing::debug!(
+                        "Writing overflow node @{}: key:{}B, overflow:{}, flags:{:?}",
+                        start,
+                        node.key.len(),
+                        overflow,
+                        node.flags
+                    );
                     writer.write_u32(size as u32)?;
                     writer.write_u16(node.flags.bits())?;
                     writer.write_u16(node.key.len() as u16)?;
                     writer.write_exact(&node.key)?;
                     writer.write_word(overflow)?;
-                    assert!(writer.pos()?==0 || writer.pos()? - start == 4 + 2 + 2 + writer.word_size() + node.key.len());
-                },
+                    assert!(
+                        writer.pos()? == 0
+                            || writer.pos()? - start
+                                == 4 + 2 + 2 + writer.word_size() + node.key.len()
+                    );
+                }
             }
         }
 
