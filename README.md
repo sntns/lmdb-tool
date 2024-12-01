@@ -1,8 +1,10 @@
-# LMDB Convert Tool
+# LMDB Tool
 
 ## Overview
 
 The LMDB Management Tool is a utility designed to facilitate the conversion of data between different formats using the Lightning Memory-Mapped Database (LMDB). This tool is essential for developers and data engineers who need to efficiently manage and transform large datasets stored in LMDB.
+
+This tool is designed to enable `mender` (see [Mender GitHub](https://github.com/mendersoftware/mender)) to convert data between different architectures, either from 32bits to 64bits or vice versa. It has been tested only with LMDB databases created by `mender`. See [README.mender.md](README.mender.md) for more details.
 
 ## Features
 
