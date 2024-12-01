@@ -44,7 +44,7 @@ jobs:
     - name: Download artifact
       uses: actions/download-artifact@v4
       with:
-        name: remora-network_${{ inputs.tag }}-1_${{ matrix.target }}.deb
+        name: lmdb_${{ inputs.tag }}-1_${{ matrix.target }}.deb
 
     - name: Upload
       uses: actions/upload-release-asset@v1
@@ -52,6 +52,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ needs.create.outputs.upload_url }}
-        asset_path: remora-network_${{ inputs.tag }}-1_${{ matrix.target }}.deb
-        asset_name: remora-network_${{ inputs.tag }}-1_${{ matrix.target }}.deb
+        asset_path: lmdb_${{ inputs.tag }}-1_${{ matrix.target }}.deb
+        asset_name: lmdb_${{ inputs.tag }}-1_${{ matrix.target }}.deb
         asset_content_type: application/vnd.debian.binary-package
