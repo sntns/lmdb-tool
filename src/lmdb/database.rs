@@ -101,6 +101,10 @@ impl<'a> Database<'a> {
         let writer = DW::from(writer);
         Self::write_from(writer)
     }
+
+    pub fn close(&mut self) -> Result<(), Error> {
+        return Ok(());
+    }
 }
 
 impl<'a> Database<'a> {

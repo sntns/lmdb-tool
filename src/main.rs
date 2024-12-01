@@ -71,20 +71,40 @@ fn main() {
 
     match opts.command {
         Commands::Convert { input, output, format } => {
-            println!("Converting to {:?}", format);
-            let mut db_in = lmdb::Factory::open(input.clone()).unwrap();
-            let mut cur_in = db_in.read_cursor().unwrap();
-
-            let mut db_out = lmdb::Factory::create(output.clone(), format).unwrap();
-            let mut cur_out = db_out.write_cursor().unwrap();
-
-            while let Some(mut element) = cur_in.next().unwrap() {
-                if element.value == "null".as_bytes() {
-                    element.value = vec![];
-                }
-                cur_out.push_element(element).unwrap();
+            let mut output = output.clone();
+            if input == output {
+                output = output.clone().with_extension("lmdb-convert-tmp");
             }
-            cur_out.commit().unwrap();
+
+            let wordize = lmdb::Factory::detect(input.clone()).unwrap();
+            if wordize != format {
+                tracing::info!("Converting database from {:?} to {:?}", wordize, format);
+                let mut db_in = lmdb::Factory::open(input.clone()).unwrap();
+                let mut cur_in = db_in.read_cursor().unwrap();
+
+                let mut db_out = lmdb::Factory::create(output.clone(), format).unwrap();
+                let mut cur_out = db_out.write_cursor().unwrap();
+
+                while let Some(mut element) = cur_in.next().unwrap() {
+                    if element.value == "null".as_bytes() {
+                        element.value = vec![];
+                    }
+                    cur_out.push_element(element).unwrap();
+                }
+                cur_out.commit().unwrap();
+                
+                db_in.close().unwrap();
+                db_out.close().unwrap();
+
+                if input == output {
+                    std::fs::rename(output.clone(), input.clone()).unwrap();
+                }
+            } else if input != output {
+                tracing::info!("No conversion needed, copying file");
+                std::fs::copy(input.clone(), output.clone()).unwrap();
+            } else {
+                tracing::info!("No conversion needed");
+            }
         }
         Commands::Dump { input, string_key, string_value, json } => {
             let mut db = lmdb::Factory::open(input.clone()).unwrap();
