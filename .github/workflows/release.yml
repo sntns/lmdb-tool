@@ -27,6 +27,29 @@ jobs:
         draft: false
         prerelease: false
 
+  upload-recipe:
+    runs-on: ubuntu-latest
+    needs: create
+    steps:
+    - name: Git describe
+      id: ghd
+      uses: proudust/gh-describe@v2
+
+    - name: Download artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: lmdb-tool_${{ inputs.tag }}.bb
+
+    - name: Upload
+      uses: actions/upload-release-asset@v1
+      env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create.outputs.upload_url }}
+        asset_path: lmdb-tool_${{ inputs.tag }}.bb
+        asset_name: lmdb-tool_${{ inputs.tag }}.bb
+        asset_content_type: text/plain
+
   upload:
     runs-on: ubuntu-latest
     needs: create
@@ -44,7 +67,7 @@ jobs:
     - name: Download artifact
       uses: actions/download-artifact@v4
       with:
-        name: lmdb_${{ inputs.tag }}-1_${{ matrix.target }}.deb
+        name: lmdb-tool_${{ inputs.tag }}-1_${{ matrix.target }}.deb
 
     - name: Upload
       uses: actions/upload-release-asset@v1
@@ -52,6 +75,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ needs.create.outputs.upload_url }}
-        asset_path: lmdb_${{ inputs.tag }}-1_${{ matrix.target }}.deb
-        asset_name: lmdb_${{ inputs.tag }}-1_${{ matrix.target }}.deb
+        asset_path: lmdb-tool_${{ inputs.tag }}-1_${{ matrix.target }}.deb
+        asset_name: lmdb-tool_${{ inputs.tag }}-1_${{ matrix.target }}.deb
         asset_content_type: application/vnd.debian.binary-package

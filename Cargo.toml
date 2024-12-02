@@ -1,16 +1,16 @@
 [package]
-name = "lmdb"
-homepage = "https://github.com/sntns/lmdb"
+name = "lmdb-tool"
+homepage = "https://github.com/sntns/lmdb-tool"
 version = "1.0.0"
 license = "MIT"
 edition = "2021"
 
 [lib]
-name = "lmdb"
+name = "lmdb_tool"
 path = "src/lib.rs"
 
 [[bin]]
-name = "lmdb"
+name = "lmdb-tool"
 path = "src/main.rs"
 
 [package.metadata.deb]
@@ -24,18 +24,18 @@ depends = "$auto"
 priority = "optional"
 assets = [
     [
-        "target/release/lmdb",
+        "target/release/lmdb-tool",
         "usr/sbin/",
         "755",
     ],
     [
         "README.md",
-        "usr/share/doc/lmdb/README",
+        "usr/share/doc/lmdb-tool/README",
         "644",
     ],
     [
         "LICENSE",
-        "usr/share/doc/lmdb/LICENSE",
+        "usr/share/doc/lmdb-tool/LICENSE",
         "644",
     ],
 ]
