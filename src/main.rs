@@ -30,7 +30,7 @@ enum Commands {
         input: std::path::PathBuf,
 
         #[clap(value_name = "destination", help = "The destination file to write to")]
-        output: std::path::PathBuf,
+        output: Option<std::path::PathBuf>,
 
         #[clap(
             short,
@@ -82,10 +82,18 @@ fn main() {
             output,
             format,
         } => {
-            let mut output = output.clone();
-            if input == output {
-                output = output.clone().with_extension("lmdb-convert-tmp");
-            }
+            let output = match output {
+                Some(output) => {
+                    if input == output {
+                        tracing::warn!("Output file is the same as input file, this will cause data loss");
+                        tracing::warn!("Please specify a different output file");
+                        std::process::exit(1);
+                    } else {
+                        output
+                    }
+                },
+                None => input.clone(),
+            };
 
             let wordize = lmdb::Factory::detect(input.clone()).unwrap();
             if wordize != format {
