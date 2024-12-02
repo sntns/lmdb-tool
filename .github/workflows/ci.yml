@@ -28,11 +28,15 @@ jobs:
 
       - name: Install cargo-deb
         if: steps.cache.outputs.cache-hit != 'true'
-        run: cargo install cargo-deb
+        run: cargo install --force cargo-deb
 
       - name: Install cross-rs
         if: steps.cache.outputs.cache-hit != 'true'
-        run: cargo install cross
+        run: cargo install --force cross
+
+      - name: Install cargo-bitbake
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: cargo install --force cargo-bitbake
 
   lint:
     needs: [prepare]
@@ -141,6 +145,43 @@ jobs:
         with:
           name: ${{ steps.package.outputs.name }}
           path: target/${{ matrix.target }}/debian/${{ steps.package.outputs.name }}
+          if-no-files-found: error
+
+  recipe:
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Git describe
+        id: ghd
+        uses: proudust/gh-describe@v2
+
+      - name: Rust Cache
+        id: cache
+        uses: actions/cache@v4
+        continue-on-error: false
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: cargo-
+    
+      - name:  Bitbake recipe
+        id: recipe
+        run: |
+          cargo bitbake -R
+          PKG=$(basename $(find . -name *.bb))
+          echo "name=$PKG" >> "$GITHUB_OUTPUT"
+        
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.recipe.outputs.name }}
+          path: ${{ steps.recipe.outputs.name }}
           if-no-files-found: error
 
   release:
