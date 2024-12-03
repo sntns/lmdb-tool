@@ -1,7 +1,7 @@
 use base64::engine::general_purpose::STANDARD as base64;
 use base64::Engine;
 use json;
-use std::{collections::HashMap, vec};
+use std::{collections::HashMap, path::PathBuf, vec};
 
 use clap::{builder::OsStr, Parser};
 
@@ -82,17 +82,25 @@ fn main() {
             output,
             format,
         } => {
-            let output = match output {
+            let (input, output) = match output {
                 Some(output) => {
                     if input == output {
-                        tracing::warn!("Output file is the same as input file, this will cause data loss");
+                        tracing::warn!(
+                            "Output file is the same as input file, this will cause data loss"
+                        );
                         tracing::warn!("Please specify a different output file");
                         std::process::exit(1);
                     } else {
-                        output
+                        (input, output)
                     }
-                },
-                None => input.clone(),
+                }
+                None => {
+                    let mut input_bak = input.clone();
+                    input_bak.set_extension("lmdb-bak");
+                    tracing::info!("No output file specified, creating a backup of the input file for inplace conversion at {:?}", input_bak);
+                    std::fs::copy(input.clone(), input_bak.clone()).unwrap();
+                    (input_bak.clone(), input.clone())
+                }
             };
 
             let wordize = lmdb::Factory::detect(input.clone()).unwrap();
