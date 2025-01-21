@@ -1,5 +1,3 @@
-use core::net;
-
 use error_stack::Report;
 use error_stack::Result;
 use error_stack::ResultExt;
